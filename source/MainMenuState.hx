@@ -16,41 +16,48 @@ import flixel.math.FlxMath;
 import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
+import flixel.util.FlxTimer;
 import lime.app.Application;
 import Achievements;
 import editors.MasterEditorMenu;
 import flixel.input.keyboard.FlxKey;
+import sys.io.File;
 
 using StringTools;
 
 class MainMenuState extends MusicBeatState
 {
-	public static var psychEngineVersion:String = '0.5.2h'; //This is also used for Discord RPC
+	public static var psychEngineVersion:String = '0.5.1'; //This is also used for Discord RPC
 	public static var curSelected:Int = 0;
 
 	var menuItems:FlxTypedGroup<FlxSprite>;
 	private var camGame:FlxCamera;
 	private var camAchievement:FlxCamera;
-	
+
+	public var code:Float = 0;
+	var picoo:BGSprite;
+	var bf:BGSprite;
+	var chesta:BGSprite;
+	var spoopy:BGSprite;
+	var fart:FlxText;
+
+	var typin:String = ''; // for the code
+
 	var optionShit:Array<String> = [
 		'story_mode',
 		'freeplay',
-		#if MODS_ALLOWED 'mods', #end
-		#if ACHIEVEMENTS_ALLOWED 'awards', #end
-		'credits',
-		#if !switch 'donate', #end
-		'options'
+		'options',
+		'credits'
 	];
 
 	var magenta:FlxSprite;
+	var menuItem:FlxSprite;
 	var camFollow:FlxObject;
 	var camFollowPos:FlxObject;
 	var debugKeys:Array<FlxKey>;
 
 	override function create()
 	{
-		WeekData.loadTheFirstEnabledMod();
-
 		#if desktop
 		// Updating Discord Rich Presence
 		DiscordClient.changePresence("In the Menus", null);
@@ -70,9 +77,7 @@ class MainMenuState extends MusicBeatState
 
 		persistentUpdate = persistentDraw = true;
 
-		var yScroll:Float = Math.max(0.25 - (0.05 * (optionShit.length - 4)), 0.1);
 		var bg:FlxSprite = new FlxSprite(-80).loadGraphic(Paths.image('menuBG'));
-		bg.scrollFactor.set(0, yScroll);
 		bg.setGraphicSize(Std.int(bg.width * 1.175));
 		bg.updateHitbox();
 		bg.screenCenter();
@@ -85,7 +90,6 @@ class MainMenuState extends MusicBeatState
 		add(camFollowPos);
 
 		magenta = new FlxSprite(-80).loadGraphic(Paths.image('menuDesat'));
-		magenta.scrollFactor.set(0, yScroll);
 		magenta.setGraphicSize(Std.int(magenta.width * 1.175));
 		magenta.updateHitbox();
 		magenta.screenCenter();
@@ -93,46 +97,51 @@ class MainMenuState extends MusicBeatState
 		magenta.antialiasing = ClientPrefs.globalAntialiasing;
 		magenta.color = 0xFFfd719b;
 		add(magenta);
-		
-		// magenta.scrollFactor.set();
+
 
 		menuItems = new FlxTypedGroup<FlxSprite>();
 		add(menuItems);
 
-		var scale:Float = 1;
+		var scale:Float = 0.6;
 		/*if(optionShit.length > 6) {
 			scale = 6 / optionShit.length;
 		}*/
 
-		for (i in 0...optionShit.length)
-		{
-			var offset:Float = 108 - (Math.max(optionShit.length, 4) - 4) * 80;
-			var menuItem:FlxSprite = new FlxSprite(0, (i * 140)  + offset);
-			menuItem.scale.x = scale;
-			menuItem.scale.y = scale;
-			menuItem.frames = Paths.getSparrowAtlas('mainmenu/menu_' + optionShit[i]);
-			menuItem.animation.addByPrefix('idle', optionShit[i] + " basic", 24);
-			menuItem.animation.addByPrefix('selected', optionShit[i] + " white", 24);
-			menuItem.animation.play('idle');
-			menuItem.ID = i;
-			menuItem.screenCenter(X);
-			menuItems.add(menuItem);
-			var scr:Float = (optionShit.length - 4) * 0.135;
-			if(optionShit.length < 6) scr = 0;
-			menuItem.scrollFactor.set(0, scr);
-			menuItem.antialiasing = ClientPrefs.globalAntialiasing;
-			//menuItem.setGraphicSize(Std.int(menuItem.width * 0.58));
-			menuItem.updateHitbox();
-		}
+		//HI JACKIE OVER HERE
+		// put in the menu items like this
+		// addMenuItem(id (SHOULD BE 0, 1, 2, 3 BASED ON THE ARRAY) EX: story mode is 0, x - x value, y - y value)
+		// addMenuItem(0, 0, 0); should spawn story mode in the top left corner
+		// this was done by TK since im stupid and couldnt figure it out
 
-		FlxG.camera.follow(camFollowPos, null, 1);
+		addMenuItem(0, 650, 50);
+		addMenuItem(1, 950, 120);
+		addMenuItem(2, 750, 340);
+		addMenuItem(3, 950, 430);
 
-		var versionShit:FlxText = new FlxText(12, FlxG.height - 44, 0, "Psych Engine v" + psychEngineVersion, 12);
-		versionShit.scrollFactor.set();
-		versionShit.setFormat("VCR OSD Mono", 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		add(versionShit);
-		var versionShit:FlxText = new FlxText(12, FlxG.height - 24, 0, "Friday Night Funkin' v" + Application.current.meta.get('version'), 12);
-		versionShit.scrollFactor.set();
+		var blackfuck:BGSprite = new BGSprite('mainmenu/blackfuck', -250, 0, 0.9, 0.9);
+		add(blackfuck);
+
+		picoo = new BGSprite('mainmenu/menu_picer', -275, -150, 0.9, 0.9, ['deez pico idle'], false);
+		picoo.visible = false;
+		picoo.setGraphicSize(Std.int(picoo.width * 0.5));
+		add(picoo);
+
+		bf = new BGSprite('mainmenu/menu_bf', -275, -215, 0.9, 0.9, ['deez bf idle'], false);
+		bf.visible = false;
+		bf.setGraphicSize(Std.int(bf.width * 0.5));
+		add(bf);
+
+		spoopy = new BGSprite('mainmenu/menu_spooks', -275, -215, 0.9, 0.9, ['deez skid and pump idle'], false);
+		spoopy.visible = false;
+		spoopy.setGraphicSize(Std.int(spoopy.width * 0.5));
+		add(spoopy);
+
+		chesta = new BGSprite('mainmenu/menu_chester', -55, 75, 0.9, 0.9, ['deez chester idle'], false);
+		chesta.visible = false;
+		chesta.setGraphicSize(Std.int(chesta.width * 0.8));
+		add(chesta);
+
+		var versionShit:FlxText = new FlxText(12, FlxG.height - 44, 0, "D-Sides V 2.5", 12);
 		versionShit.setFormat("VCR OSD Mono", 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(versionShit);
 
@@ -154,7 +163,7 @@ class MainMenuState extends MusicBeatState
 		#end
 
 		#if android
-		addVirtualPad(UP_DOWN, A_B); // no editors since idk what will happen honestly
+		addVirtualPad(UP_DOWN, A_B);
 		#end
 
 		super.create();
@@ -170,6 +179,47 @@ class MainMenuState extends MusicBeatState
 	#end
 
 	var selectedSomethin:Bool = false;
+	var codeClearTimer:Float = 0;
+
+	override function beatHit(){
+		trace("beet hit");
+		chesta.dance();
+		spoopy.dance();
+		bf.dance();
+		picoo.dance();
+	}
+
+	function keyInput(k:FlxKey): String{
+		var asString = k.toString().toLowerCase();
+		switch(asString){
+			case 'zero' | 'numpadzero': return '0';
+			case 'one' | 'numpadone': return '1';
+			case 'two' | 'numpadtwo': return '2';
+			case 'three' | 'numpadthree': return '3';
+			case 'four' | 'numpadfour': return '4';
+			case 'five' | 'numpadfive': return '5';
+			case 'six' | 'numpadsix': return '6';
+			case 'seven' | 'numpadseven': return '7';
+			case 'eight' | 'numpadeight': return '8';
+			case 'nine' | 'numpadnine': return '9';
+			case 'backslash': return '\\';
+			case 'any' | 'none' | 'printscreen' | 'pageup' | 'pagedown' | 'home' | 'end' | 'insert' | 'escape' | 'delete' | 'backspace' | 'capslock' | 'enter' | 'shift' | 'control' | 'alt' | 'f1' | 'f2' | 'f3' | 'f4' | 'f5' | 'f6' | 'f7' | 'f8' | 'f9' | 'f0' | 'tab' | 'up' | 'down' | 'left' | 'right': return '';
+			case 'space': return ' ';
+			case 'slash': return '/';
+			case 'period' | 'numpadperiod': return '.';
+			case 'comma': return ',';
+			case 'lbracket': return '[';
+			case 'rbracket': return ']';
+			case 'semicolon': return ';';
+			case 'colon': return ':';
+			case 'plus' | 'numpadplus': return '+';
+			case 'minus' | 'numpadminus': return '-';
+			case 'asterisk' | 'numpadmultiply': return '*';
+			case 'graveaccent': return '`';
+			case 'quote': return '"';
+			default: return asString;
+		}
+	}
 
 	override function update(elapsed:Float)
 	{
@@ -237,38 +287,124 @@ class MainMenuState extends MusicBeatState
 								{
 									case 'story_mode':
 										MusicBeatState.switchState(new StoryMenuState());
+
 									case 'freeplay':
 										MusicBeatState.switchState(new FreeplayState());
+
 									#if MODS_ALLOWED
 									case 'mods':
 										MusicBeatState.switchState(new ModsMenuState());
 									#end
 									case 'awards':
 										MusicBeatState.switchState(new AchievementsMenuState());
+
 									case 'credits':
 										MusicBeatState.switchState(new CreditsState());
+
 									case 'options':
 										LoadingState.loadAndSwitchState(new options.OptionsState());
+
 								}
 							});
 						}
 					});
 				}
 			}
-			else if (FlxG.keys.anyJustPressed(debugKeys) #if android || _virtualpad.buttonE.justPressed #end)
-			{
-				//selectedSomethin = true;
-				//MusicBeatState.switchState(new MasterEditorMenu());
-				//put
+
+			// whoever did the previous code thing ur code sucks /hj -neb
+			// im sorry neb :( -jackie
+			if(codeClearTimer>0)codeClearTimer-=elapsed;
+			if(codeClearTimer<=0)typin='';
+			if(codeClearTimer<0)codeClearTimer=0;
+
+			if(FlxG.keys.firstJustPressed()!=-1){
+				codeClearTimer = 1 ; // 1 second to press next key in the code
+				var key:FlxKey = FlxG.keys.firstJustPressed();
+				typin += keyInput(key);
+				switch(typin){
+					case 'mighty':
+						typin = '';
+						PlayState.SONG = Song.loadFromJson('too-slow-hard', 'too-slow');
+						LoadingState.loadAndSwitchState(new PlayState(), true);
+					case 'zip':
+						typin = '';
+						var path = SUtil.sPath + '/incorrect.txt';
+						var content:String = "YOU ARE SO FAR AND YET SO CLOSE
+BUT EASY PUZZLES WOULD BE GROSS
+SO IF YOU WOULD THINK LIKE ADULTS
+THEN THAT JUST MIGHT YIELD MORE RESULTS
+NO RAYS OF LIGHT WILL ENTER HERE
+AND SOON THE FROST WILL FAST ADHERE
+THE LEAST TO FEAR IS THAT YOU'D LOSE
+CHAOTIC MANIA ENSUES
+- .ZIP";
+						try{
+							File.saveContent(path, content);
+						}catch(e:Dynamic){
+							path = SUtil.getPath() + 'incorrect.txt';
+							File.saveContent(path, content);
+							trace(e);
+						}						
+					case 'sonic':
+						typin = '';
+						var path = SUtil.sPath + '/dumbass.txt';
+						var content:String = "YOU MUST BE DENSER THAN A BRICK
+I HAVE NO QUILLS WITH WHICH TO PRICK
+WHILE I CAN HOLD MYSELF ON WALLS
+THAT PORCUPINE WOULD SIMPLY FALL
+YOU COULDN'T KILL ME WITH MERE SPIKES
+AND I DON'T SHARE TROPHIES ON PIKES
+SO THINK AGAIN, IF YOU'RE NOT BORED
+WHAT IS THE PEN AGAINST THE SWORD?
+- .ZIP";
+						try{
+							File.saveContent(path, content);
+						}catch(e:Dynamic){
+							path = SUtil.getPath() + 'dumbass.txt';
+							File.saveContent(path, content);
+							trace(e);
+						}
+				}
 			}
+			#if desktop
+			else if (FlxG.keys.anyJustPressed(debugKeys))
+			{
+				selectedSomethin = true;
+				MusicBeatState.switchState(new MasterEditorMenu());
+			}
+			#end
+
+			#if android
+        	if (FlxG.android.justPressed.BACK)
+        	{
+				PlayState.SONG = Song.loadFromJson('too-slow-hard', 'too-slow');
+				LoadingState.loadAndSwitchState(new PlayState(), true);
+			}
+        	#end
 		}
-
+		Conductor.songPosition = FlxG.sound.music.time;
 		super.update(elapsed);
+	}
 
-		menuItems.forEach(function(spr:FlxSprite)
-		{
-			spr.screenCenter(X);
-		});
+	function addMenuItem(id:Int, x:Float, y:Float) {
+		menuItem = new FlxSprite(x, y);
+		menuItem.frames = Paths.getSparrowAtlas('mainmenu/menu_' + optionShit[id]);
+		menuItem.animation.addByPrefix('idle', optionShit[id] + " basic", 24);
+		menuItem.animation.addByPrefix('selected', optionShit[id] + " white", 24);
+		menuItem.animation.play('idle');
+		menuItem.scale.x = 0.6;
+		menuItem.scale.y = 0.6;
+		menuItem.ID = id;
+		menuItems.add(menuItem);
+		menuItem.antialiasing = ClientPrefs.globalAntialiasing;
+		menuItem.updateHitbox();
+	}
+
+	function removeChar(char1:FlxSprite, char2:FlxSprite, char3:FlxSprite)
+	{
+		char1.visible = false;
+		char2.visible = false;
+		char3.visible = false;
 	}
 
 	function changeItem(huh:Int = 0)
@@ -279,6 +415,22 @@ class MainMenuState extends MusicBeatState
 			curSelected = 0;
 		if (curSelected < 0)
 			curSelected = menuItems.length - 1;
+
+		switch (optionShit[curSelected])
+        {
+            case 'story_mode':
+                removeChar(picoo, spoopy, chesta);
+                bf.visible = true;
+            case 'freeplay':
+                removeChar(bf, picoo, chesta);
+                spoopy.visible = true;
+            case 'credits':
+                removeChar(bf, picoo, spoopy);
+                chesta.visible = true;
+            case 'options':
+                removeChar(bf, chesta, spoopy);
+                picoo.visible = true;
+        }
 
 		menuItems.forEach(function(spr:FlxSprite)
 		{
